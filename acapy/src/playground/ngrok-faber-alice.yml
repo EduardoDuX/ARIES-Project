@@ -1,0 +1,8 @@
+tunnels:
+    usp:
+        proto: http
+        addr: usp-agent:9001
+    eduardo:
+        proto: http
+        addr: eduardo-agent:9002
+version: "2"

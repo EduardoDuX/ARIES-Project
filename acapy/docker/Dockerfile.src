@@ -1,0 +1,33 @@
+ARG from_image=ghcr.io/hyperledger/aries-cloudagent-python:py3.9-0.12.1
+FROM ${from_image}
+
+ENV ENABLE_PTVSD 0
+ENV ENABLE_PYDEVD_PYCHARM 0
+ENV PYDEVD_PYCHARM_HOST "host.docker.internal"
+
+RUN mkdir -p bin && curl -L -o bin/jq \
+	https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 && \
+	chmod ug+x bin/jq
+
+# Add and install Aries Agent code
+RUN pip install --no-cache-dir poetry
+
+ADD README.md pyproject.toml poetry.lock ./
+
+ARG all_extras=0
+RUN if ! [ -z ${all_extras} ]; then poetry install --no-root --no-directory --all-extras; else poetry install --no-root --no-directory -E "askar didcommv2"; fi
+
+ADD acapy_agent ./acapy_agent
+ADD scripts ./scripts
+
+RUN pip3 install --no-cache-dir -e .
+
+RUN mkdir src && chown -R aries:aries src && chmod -R ug+rw src
+
+# Add and install src code
+ADD src/requirements.txt ./src/requirements.txt
+RUN pip3 install --no-cache-dir -r src/requirements.txt
+
+ADD src ./src
+
+ENTRYPOINT ["bash", "-c", "src/ngrok-wait.sh \"$@\"", "--"]
